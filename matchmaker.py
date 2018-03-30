@@ -21,10 +21,11 @@ SCOPES = 'https://www.googleapis.com/auth/spreadsheets'
 CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'Google Sheets API Python Quickstart'
 
-INPUT_RANGE_NAME = 'office_list!A2:C400'
-OPT_OUT_RANGE_NAME = 'Form Responses 2!A1:C100'
+OFFICE_LIST_RANGE_NAME = 'office_list!A2:C400'
+OPT_OUT_RANGE_NAME = 'Form Responses 2!A2:C100'
 OUTPUT_RANGE_NAME = 'matchmaker_output!A1:W400'
 SPREADSHEET_ID = '1mb2_RuTwYXChc9wyebzVXJ75uh7mgqof220eZvFc9Iw'
+
 
 def get_credentials():
     """Gets valid user credentials from storage.
@@ -54,7 +55,8 @@ def get_credentials():
         print('Storing credentials to ' + credential_path)
     return credentials
 
-def get_people_list(service, spreadsheetId, rangeName):
+
+def get_data_from_google_sheets(service, spreadsheetId, rangeName):
     result = service.spreadsheets().values().get(
         spreadsheetId=spreadsheetId, range=rangeName).execute()
     values = result.get('values', [])
@@ -64,28 +66,22 @@ def get_people_list(service, spreadsheetId, rangeName):
     else:
         return values
 
-def match_make(values):
-    print('length of values:')
-    print(len(values))
-    current_group = []
+
+def make_matches(people, opt_outs):
     groups = []
     group_size = 2
-    people = [row for row in values]
-    print('length of people:')
-    print(len(people))
+    opt_outs_ldaps = [row[2] for row in opt_outs]
+    people = [person for person in people if person[1] not in opt_outs_ldaps]
     random.shuffle(people)
 
     groups = [people[i:i + group_size] for i in range(0, len(people), group_size)]
-    print(groups)
 
     # If the last group is too small, add to last group
     if len(groups[-1]) < 2:
         leftovers = groups.pop()
         groups[-1] = groups[-1] + leftovers
-        print(groups[-1])
-    print('length of groups:')
-    print(len(groups))
     return groups
+
 
 def write_groups_to_sheets(groups):
 
@@ -117,6 +113,7 @@ def write_groups_to_sheets(groups):
     pprint(response)
     # service.spreadsheets().values().get(spreadsheetId=spreadsheetId, range=rangeName).execute()
 
+
 def modify_data(matches):
     headers = [
         'person 1 name',
@@ -129,24 +126,18 @@ def modify_data(matches):
         'person 3 ldap',
         'person 3 team'
         ]
-    modified_matches = [match[0] + match[1] for match in matches]
+    # modified_matches = [match[0] + match[1] for match in matches]
     modified_matches = []
     for match in matches:
         match_list = []
         for item in match:
             match_list = match_list + item
         modified_matches.append(match_list)
-    import pdb; pdb.set_trace()
     modified_matches.insert(0, headers)
     return modified_matches
 
-def main():
-    """Shows basic usage of the Sheets API.
 
-    Creates a Sheets API service object and prints the names and majors of
-    students in a sample spreadsheet:
-    https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
-    """
+def main():
     credentials = get_credentials()
     http = credentials.authorize(httplib2.Http())
     discoveryUrl = ('https://sheets.googleapis.com/$discovery/rest?'
@@ -154,11 +145,10 @@ def main():
     service = discovery.build('sheets', 'v4', http=http,
                               discoveryServiceUrl=discoveryUrl)
 
-    spreadsheetId = SPREADSHEET_ID
-    rangeName = INPUT_RANGE_NAME
-    values = get_people_list(service, spreadsheetId, rangeName)
+    office_people_list = get_data_from_google_sheets(service, SPREADSHEET_ID, OFFICE_LIST_RANGE_NAME)
+    opt_out_list = get_data_from_google_sheets(service, SPREADSHEET_ID, OPT_OUT_RANGE_NAME)
 
-    matches = match_make(values)
+    matches = make_matches(office_people_list, opt_out_list)
     # print(matches)
     matches = modify_data(matches)
     # print(matches)
