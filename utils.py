@@ -61,7 +61,6 @@ def get_service():
 
 
 def get_data_from_google_sheets(spreadsheetId, rangeName):
-    import pdb; pdb.set_trace()
     service = get_service()
     result = service.spreadsheets().values().get(
         spreadsheetId=spreadsheetId, range=rangeName).execute()

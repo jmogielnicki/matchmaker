@@ -17,42 +17,32 @@ APPLICATION_NAME = 'Google Sheets API Python Quickstart'
 
 
 def make_matches(people, opt_outs):
-    groups = []
     group_size = 2
     opt_outs_ldaps = [row[2] for row in opt_outs]
     people = [person for person in people if person[1] not in opt_outs_ldaps]
     random.shuffle(people)
 
-    groups = [people[i:i + group_size] for i in range(0, len(people), group_size)]
+    match_number = 0
+    for idx, person in enumerate(people):
+        person.append(match_number)
+        # increment group number
+        # Do not increment if we only have 1 person left in the list - instead include them in last group
+        if idx % group_size == 1 and len(people) - idx > 2:
+            match_number += 1
 
-    # If the last group is too small, add to last group
-    if len(groups[-1]) < 2:
-        leftovers = groups.pop()
-        groups[-1] = groups[-1] + leftovers
-    return groups
+    return people
 
 
-def modify_data(matches):
+def apply_header(matches):
     headers = [
-        'person 1 name',
-        'person 1 ldap',
-        'person 1 team',
-        'person 2 name',
-        'person 2 ldap',
-        'person 2 team',
-        'person 3 name',
-        'person 3 ldap',
-        'person 3 team'
+        'name',
+        'ldap',
+        'team',
+        'match #',
         ]
-    # modified_matches = [match[0] + match[1] for match in matches]
-    modified_matches = []
-    for match in matches:
-        match_list = []
-        for item in match:
-            match_list = match_list + item
-        modified_matches.append(match_list)
-    modified_matches.insert(0, headers)
-    return modified_matches
+    matches.insert(0, headers)
+    return matches
+
 
 
 def main():
@@ -60,11 +50,7 @@ def main():
     opt_out_list = get_data_from_google_sheets(SPREADSHEET_ID, OPT_OUT_RANGE_NAME)
 
     matches = make_matches(office_people_list, opt_out_list)
-    # print(matches)
-    matches = modify_data(matches)
-    # print(matches)
-    for match in matches:
-        print(match)
+    matches = apply_header(matches)
 
     write_groups_to_sheets(matches, SPREADSHEET_ID, OUTPUT_RANGE_NAME)
 
