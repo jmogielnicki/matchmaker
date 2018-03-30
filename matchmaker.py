@@ -38,7 +38,7 @@ def apply_header(matches):
         'name',
         'ldap',
         'team',
-        'match #',
+        'match_id',
         ]
     matches.insert(0, headers)
     return matches
