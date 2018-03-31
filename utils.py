@@ -8,11 +8,6 @@ from oauth2client import tools
 from oauth2client.file import Storage
 from pprint import pprint
 
-try:
-    import argparse
-    flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
-except ImportError:
-    flags = None
 
 # If modifying these scopes, delete your previously saved credentials
 # at ~/.credentials/sheets.googleapis.com-python-quickstart.json
@@ -73,12 +68,10 @@ def get_data_from_google_sheets(spreadsheetId, rangeName):
 
 
 def write_groups_to_sheets(groups, spreadsheet_id, range):
-
-    credentials = get_credentials()
-    service = discovery.build('sheets', 'v4', credentials=credentials)
+    service = get_service()
 
     # How the input data should be interpreted.
-    value_input_option = 'RAW'  # TODO: Update placeholder value.
+    value_input_option = 'RAW'
 
     value_range_body = {
         "range": range,
@@ -94,6 +87,18 @@ def write_groups_to_sheets(groups, spreadsheet_id, range):
     )
     response = request.execute()
     pprint(response)
-    # service.spreadsheets().values().get(spreadsheetId=spreadsheetId, range=rangeName).execute()
 
 
+def dictify_data(data):
+    headers = data[:1]
+    headers = headers[0]
+    people = data[1:]
+    matches = {}
+    for person in people:
+        person_as_dict = dict(zip(headers, person))
+        match_id = person_as_dict.get('match_id')
+        if not matches.get(match_id):
+            matches[match_id] = [person_as_dict]
+        else:
+            matches[match_id].append(person_as_dict)
+    return matches
