@@ -1,8 +1,9 @@
-from consts import OUTPUT_RANGE_NAME, SPREADSHEET_ID
-from utils import get_data_from_google_sheets, write_groups_to_sheets, dictify_data
+import consts
+import utils
 
 def print_slackified_matches(data):
-    matches = dictify_data(data)
+    matches = utils.dictify_data(data)
+    print matches
     count = 1
     match_string = ''
     for key, list_of_matches in matches.iteritems():
@@ -16,7 +17,7 @@ def print_slackified_matches(data):
     print(match_string)
 
 def main():
-    match_list = get_data_from_google_sheets(SPREADSHEET_ID, OUTPUT_RANGE_NAME)
+    match_list = utils.get_data_from_google_sheets(consts.SPREADSHEET_ID, consts.OUTPUT_RANGE_NAME)
     print_slackified_matches(match_list)
 
 if __name__ == '__main__':

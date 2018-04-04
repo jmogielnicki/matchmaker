@@ -1,6 +1,9 @@
 from __future__ import print_function
 import httplib2
 import os
+import datetime
+import pytz
+import consts
 
 from apiclient import discovery
 from oauth2client import client
@@ -8,15 +11,24 @@ from oauth2client import tools
 from oauth2client.file import Storage
 from pprint import pprint
 
+try:
+    import argparse
+    flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
+except ImportError:
+    flags = None
 
 # If modifying these scopes, delete your previously saved credentials
 # at ~/.credentials/sheets.googleapis.com-python-quickstart.json
-SCOPES = 'https://www.googleapis.com/auth/spreadsheets'
+SCOPES_SHEETS = 'https://www.googleapis.com/auth/spreadsheets'
+SCOPES_CALENDAR = 'https://www.googleapis.com/auth/calendar'
+BASE_CREDENTIALS_PATH_SHEETS = 'sheets.googleapis.com'
+BASE_CREDENTIALS_PATH_CALENDAR = 'calendar'
 CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'Google Sheets API Python Quickstart'
 
 
-def get_credentials():
+
+def get_credentials(type):
     """Gets valid user credentials from storage.
 
     If nothing has been stored, or if the stored credentials are invalid,
@@ -25,17 +37,19 @@ def get_credentials():
     Returns:
         Credentials, the obtained credential.
     """
+    base_credentials_string = BASE_CREDENTIALS_PATH_CALENDAR if type == 'calendar' else BASE_CREDENTIALS_PATH_SHEETS
+    scope = SCOPES_CALENDAR if type == 'calendar' else SCOPES_SHEETS
     home_dir = os.path.expanduser('~')
     credential_dir = os.path.join(home_dir, '.credentials')
     if not os.path.exists(credential_dir):
         os.makedirs(credential_dir)
     credential_path = os.path.join(credential_dir,
-                                   'sheets.googleapis.com-python-quickstart.json')
+                                   '{0}-python-quickstart.json'.format(base_credentials_string))
 
     store = Storage(credential_path)
     credentials = store.get()
     if not credentials or credentials.invalid:
-        flow = client.flow_from_clientsecrets(CLIENT_SECRET_FILE, SCOPES)
+        flow = client.flow_from_clientsecrets(CLIENT_SECRET_FILE, scope)
         flow.user_agent = APPLICATION_NAME
         if flags:
             credentials = tools.run_flow(flow, store, flags)
@@ -44,10 +58,13 @@ def get_credentials():
         print('Storing credentials to ' + credential_path)
     return credentials
 
-
-def get_service():
-    credentials = get_credentials()
+def get_http(type):
+    credentials = get_credentials(type)
     http = credentials.authorize(httplib2.Http())
+    return http
+
+def get_sheets_service():
+    http = get_http('sheets')
     discoveryUrl = ('https://sheets.googleapis.com/$discovery/rest?'
                     'version=v4')
     service = discovery.build('sheets', 'v4', http=http,
@@ -55,8 +72,41 @@ def get_service():
     return service
 
 
+def get_calendar_service():
+    http = get_http('calendar')
+    service = discovery.build('calendar', 'v3', http=http)
+    return service
+
+
+def get_calendar_events(start_date, end_date):
+    # This event should be returned by freebusy
+    service = get_calendar_service()
+    body = {
+      "timeMin": start_date.isoformat(),
+      "timeMax": end_date.isoformat(),
+      "timeZone": consts.TIMEZONE,
+      "items": [
+            {"id": 'jmogielnicki@pinterest.com'},
+            {"id": 'ncheng@pinterest.com'}
+          ]
+    }
+
+    eventsResult = service.freebusy().query(body=body).execute()
+    cal_dict = eventsResult[u'calendars']
+    return cal_dict
+
+    # This returns all details of meetings on calendars.
+    # service = get_calendar_service()
+    # now = datetime.datetime.utcnow().isoformat() + 'Z' # 'Z' indicates UTC time
+    # print('Getting the upcoming 10 events')
+    # eventsResult = service.events().list(
+    #     calendarId='jmogielnicki@pinterest.com', timeMin=now, maxResults=10, singleEvents=True,
+    #     orderBy='startTime').execute()
+    # return eventsResult
+
+
 def get_data_from_google_sheets(spreadsheetId, rangeName):
-    service = get_service()
+    service = get_sheets_service()
     result = service.spreadsheets().values().get(
         spreadsheetId=spreadsheetId, range=rangeName).execute()
     values = result.get('values', [])
@@ -68,7 +118,7 @@ def get_data_from_google_sheets(spreadsheetId, rangeName):
 
 
 def write_groups_to_sheets(groups, spreadsheet_id, range):
-    service = get_service()
+    service = get_sheets_service()
 
     # How the input data should be interpreted.
     value_input_option = 'RAW'

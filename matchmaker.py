@@ -8,7 +8,7 @@ from utils import get_data_from_google_sheets, write_groups_to_sheets
 def make_matches(people, opt_outs):
     group_size = 2
     opt_outs_ldaps = [row[2] for row in opt_outs]
-    people = [person for person in people if person[1] not in opt_outs_ldaps]
+    people = [person for person in people if person[1] not in opt_outs_ldaps and person[-1] != 'y']
     random.shuffle(people)
 
     match_number = 0
