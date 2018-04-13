@@ -78,17 +78,17 @@ def get_calendar_service():
     return service
 
 
-def get_calendar_events(start_date, end_date):
+def get_calendar_events(start_date, end_date, ids):
     # This event should be returned by freebusy
     service = get_calendar_service()
+    items = []
+    for id in ids:
+        items.append({"id": id})
     body = {
       "timeMin": start_date.isoformat(),
       "timeMax": end_date.isoformat(),
       "timeZone": consts.TIMEZONE,
-      "items": [
-            {"id": 'jmogielnicki@pinterest.com'},
-            {"id": 'ncheng@pinterest.com'}
-          ]
+      "items": items,
     }
 
     eventsResult = service.freebusy().query(body=body).execute()
@@ -103,6 +103,32 @@ def get_calendar_events(start_date, end_date):
     #     calendarId='jmogielnicki@pinterest.com', timeMin=now, maxResults=10, singleEvents=True,
     #     orderBy='startTime').execute()
     # return eventsResult
+
+def create_calendar_event():
+    service = get_calendar_service()
+    event = {
+        'summary': 'This is a test',
+        'location': '',
+        'description': 'A chance to hear more about Google\'s developer products.',
+        'start': {
+            'dateTime': '2018-04-07T10:00:00-07:00',
+            'timeZone': 'America/Los_Angeles',
+        },
+        'end': {
+            'dateTime': '2018-04-07T11:00:00-07:00',
+            'timeZone': 'America/Los_Angeles',
+        },
+        'attendees': [
+            {'email': 'jmogielnicki@gmail.com'},
+            {'email': 'misspetry@gmail.com'},
+        ],
+        'reminders': {
+            'useDefault': True,
+        },
+    }
+
+    event = service.events().insert(calendarId='primary', body=event).execute()
+    # print 'Event created: %s' % (event.get('htmlLink'))
 
 
 def get_data_from_google_sheets(spreadsheetId, rangeName):
