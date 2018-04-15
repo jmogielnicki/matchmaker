@@ -2,18 +2,17 @@ import consts
 import utils
 
 def print_slackified_matches(data):
-    matches = utils.dictify_data(data)
-    print matches
-    count = 1
+    matches = utils.dictify_match_data(data=data)
     match_string = ''
-    for key, list_of_matches in matches.iteritems():
-        match_string += 'match {}: '.format(count)
+    match_ids = sorted([int(key) for key in matches.keys()])
+    for match_id in match_ids:
+        match_string += 'match {}: '.format(match_id)
+        list_of_matches = matches[str(match_id)]
         for person in list_of_matches:
             match_string += '@'
             match_string += person.get('ldap')
             match_string += ' '
         match_string += '\n'
-        count += 1
     print(match_string)
 
 def main():

@@ -1,5 +1,6 @@
-OFFICE_LIST_RANGE_NAME = 'office_list!A2:D400'
+OFFICE_LIST_RANGE_NAME = 'office_list!A1:E400'
 OPT_OUT_RANGE_NAME = 'Form Responses 2!A2:C100'
 OUTPUT_RANGE_NAME = 'matchmaker_output!A1:W400'
+HISTORICAL_MATCHES_RANGE_NAME = 'historical_matches!A1:E400'
 SPREADSHEET_ID = '1mb2_RuTwYXChc9wyebzVXJ75uh7mgqof220eZvFc9Iw'
 TIMEZONE = 'America/Los_Angeles'

@@ -5,17 +5,18 @@ import datetime
 import pytz
 import consts
 
+
 from apiclient import discovery
 from oauth2client import client
 from oauth2client import tools
 from oauth2client.file import Storage
 from pprint import pprint
 
-try:
-    import argparse
-    flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
-except ImportError:
-    flags = None
+# try:
+#     import argparse
+#     flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
+# except ImportError:
+#     flags = None
 
 # If modifying these scopes, delete your previously saved credentials
 # at ~/.credentials/sheets.googleapis.com-python-quickstart.json
@@ -142,6 +143,19 @@ def get_data_from_google_sheets(spreadsheetId, rangeName):
     else:
         return values
 
+def clear_sheet(spreadsheet_id, range):
+    service = get_sheets_service()
+    clear_values_request_body = {
+    }
+
+    request = service.spreadsheets().values().clear(
+        spreadsheetId=spreadsheet_id,
+        range=range,
+        body=clear_values_request_body
+
+    )
+    response = request.execute()
+    pprint(response)
 
 def write_groups_to_sheets(groups, spreadsheet_id, range):
     service = get_sheets_service()
@@ -155,6 +169,8 @@ def write_groups_to_sheets(groups, spreadsheet_id, range):
         "values": groups
     }
 
+    clear_sheet(spreadsheet_id, range)
+
     request = service.spreadsheets().values().update(
         spreadsheetId=spreadsheet_id,
         range=range,
@@ -165,9 +181,8 @@ def write_groups_to_sheets(groups, spreadsheet_id, range):
     pprint(response)
 
 
-def dictify_data(data):
-    headers = data[:1]
-    headers = headers[0]
+def dictify_match_data(data):
+    headers = data[:1][0]
     people = data[1:]
     matches = {}
     for person in people:
@@ -178,3 +193,26 @@ def dictify_data(data):
         else:
             matches[match_id].append(person_as_dict)
     return matches
+
+def convert_sheets_data_to_list_of_dicts(data):
+    # takes google sheets data (list of lists with header row as first item in list) and transforms into dictionary
+    headers = data[:1][0]
+    people = data[1:]
+    return [dict(zip(headers, person)) for person in people]
+
+def convert_list_of_dicts_to_sheets_format(data):
+    # takes dictionary data and transforms it into list of lists that google sheets expects
+    rows = []
+    fields_to_output = ['name', 'ldap', 'team', 'blacklist', 'match_id']
+    rows.append(fields_to_output)
+    row = []
+    for person in data:
+        for header_name in fields_to_output:
+            cell_value = person.get(header_name)
+            if isinstance(cell_value, list):
+                cell_value = [str(value) for value in cell_value]
+                cell_value = ', '.join(cell_value)
+            row.append(cell_value)
+        rows.append(row)
+        row = []
+    return rows

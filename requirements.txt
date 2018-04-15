@@ -2,6 +2,9 @@
 ####### example-requirements.txt #######
 #
 ###### Requirements without Version Specifiers ######
+sys
+argparse
+random
 httplib2
 apiclient
 #
