@@ -4,12 +4,15 @@ import base64
 import googleapiclient.errors as errors
 import httplib2
 import os
+import utils
 
 from apiclient import discovery
+from consts import OFFICE_LIST_RANGE_NAME, OPT_OUT_RANGE_NAME, OUTPUT_RANGE_NAME, SPREADSHEET_ID
 from oauth2client import client
 from oauth2client import tools
 from oauth2client.file import Storage
 from email.mime.text import MIMEText
+
 
 try:
     import argparse
@@ -65,10 +68,11 @@ def create_message(sender, to, subject, message_text):
   Returns:
     An object containing a base64url encoded email object.
   """
-  message = MIMEText(message_text)
+  message = MIMEText(message_text, 'html')
   message['to'] = to
   message['from'] = sender
   message['subject'] = subject
+  message['reply-to'] = 'no-reply-seattle-knit@pinterest.com'
   return {'raw': base64.urlsafe_b64encode(message.as_string())}
 
 
@@ -97,18 +101,40 @@ def get_recipients_str(data):
     recipients = []
     for recipient in data:
         recipients.append(recipient['ldap'] + '@pinterest.com')
+    return ', '.join(recipients)
 
+def get_recipient_names(data):
+    recipients = []
+    for recipient in data:
+        recipients.append(recipient['name'])
     return ', '.join(recipients)
 
 
 def email_pairs(service, recipients_dict):
     for recipients_list in recipients_dict.values():
-        subject = 'Seattle Knitting Pairing'
+        subject = 'Seattle Knitting Match for Week of 4/2'
         sender = 'Seattle Knitting <knit-seattle@pinterest.com>'
-        message_text = 'Hi there, \n\nFor this week\'s Knitting session, you have been paired with: '
-        message_text += '\nGrab a coffee with your partner(s), and get chatting! \n\nCheers,\nSeattle Knit Association (SKA)'
+        # message_text = 'Hi all,\n\nCongratulations! Here is your Seattle Knitting match for this week: '
+        # message_text += get_recipient_names(recipients_list)
+        # message_body = "\nAll of you are in this email thread, so just hit \"Reply All\" to start a conversation and coordinate a time to meet up this week. " \
+        # + "Feel free to go for a walk, grab a coffee, or sit and chat in the lunch area! Here are a few conversation starters that you may find useful: " \
+        # + "https://w.pinadmin.com/display/SEAT/Seattle+Knitting. \n\nCheers,\nSeattle Knitting Association (SKA)"
+        html = """\
+        <html>
+        <head></head>
+        <body>
+            <p>Hi all,<br><br>
+            \n\nCongratulations, you have been matched! Your knitting group this week is: <b>""" \
+        + get_recipient_names(recipients_list) + """\
+            </b><br><br>
+            All of you are in this email thread, so just hit \"Reply All\" to start a conversation and coordinate a time to meet up this week.
+            Feel free to go for a walk, grab a coffee, or sit and chat in the lunch area! Here are a few <a href="https://w.pinadmin.com/display/SEAT/Seattle+Knitting">conversation starters</a> that you may find useful.
+            </p>
+        </body>
+        </html>
+        """
         recipients = get_recipients_str(recipients_list)
-        msg = create_message(sender, recipients, subject, message_text)
+        msg = create_message(sender, recipients, subject, html)
         send_message(service=service, user_id='me', message=msg)
         print("Sent.")
 
@@ -122,9 +148,11 @@ def main():
     credentials = get_credentials()
     http = credentials.authorize(httplib2.Http())
     service = discovery.build('gmail', 'v1', http=http)
-
-    recipients = {0: [{'ldap': u'ncheng', 'match_id': 0, 'name': u'Nancy Cheng', 'team': u'Ads Measurement'}, {'ldap': u'jmogielnicki', 'match_id': 0, 'name': u'John Mogielnicki', 'team': u'CPX'}]}
-    email_pairs(service, recipients)
+    match_list = utils.get_data_from_google_sheets(SPREADSHEET_ID, OUTPUT_RANGE_NAME)
+    recipients = utils.dictify_match_data(match_list)
+    print(recipients)
+    # recipients = {0: [{'ldap': u'jschlegel', 'match_id': 0, 'name': u'Jason Schlegal', 'team': u''}, {'ldap': u'jmogielnicki', 'match_id': 0, 'name': u'John Mogielnicki', 'team': u'CPX'}]}
+    # email_pairs(service, recipients)
 
 
 
