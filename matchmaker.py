@@ -84,7 +84,8 @@ def main(args):
 
     matches = make_matches(people, opt_out_list)
     matches = sorted(matches, key=lambda match: int(match.get('match_id')))
-    matches = utils.convert_list_of_dicts_to_sheets_format(matches)
+    fields_to_output = ['name', 'ldap', 'team', 'blacklist', 'match_id']
+    matches = utils.convert_list_of_dicts_to_sheets_format(matches, fields_to_output)
 
     if args.write:
         utils.write_groups_to_sheets(matches, consts.SPREADSHEET_ID, consts.OUTPUT_RANGE_NAME)

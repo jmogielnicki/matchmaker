@@ -22,7 +22,7 @@ def daterange_weekdays(start_date, end_date):
         if date.weekday() < 5:
           print date.weekday()
           yield date
-        
+
 def dates_and_times_to_check():
   work_hours = [13,14,15,16]
   for date in daterange_weekdays(START_DATE_CALENDAR_MATCHING, END_DATE_CALENDAR_MATCHING):
@@ -47,7 +47,7 @@ def print_calendar(calendar_info):
 
 def get_calendar_info():
   ids = ['jmogielnicki@pinterest.com', 'ncheng@pinterest.com']
-  cal_dict = utils.get_calendar_events(START_DATETIME_FREEBUSY, END_DATETIME_FREEBUSY, ids)
+  cal_dict = utils.get_busy_times(START_DATETIME_FREEBUSY, END_DATETIME_FREEBUSY, ids)
   for cal_name in cal_dict:
       for busy_block in cal_dict[cal_name].get('busy'):
         busy_block['start_datetime'] = parse(busy_block.get('start'))

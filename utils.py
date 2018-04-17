@@ -4,6 +4,7 @@ import os
 import datetime
 import pytz
 import consts
+from datetime import timedelta
 
 
 from apiclient import discovery
@@ -79,7 +80,7 @@ def get_calendar_service():
     return service
 
 
-def get_calendar_events(start_date, end_date, ids):
+def get_busy_times(start_date, end_date, ids):
     # This event should be returned by freebusy
     service = get_calendar_service()
     items = []
@@ -96,14 +97,22 @@ def get_calendar_events(start_date, end_date, ids):
     cal_dict = eventsResult[u'calendars']
     return cal_dict
 
+def get_calendar_events(ldap, start, end):
     # This returns all details of meetings on calendars.
-    # service = get_calendar_service()
-    # now = datetime.datetime.utcnow().isoformat() + 'Z' # 'Z' indicates UTC time
-    # print('Getting the upcoming 10 events')
-    # eventsResult = service.events().list(
-    #     calendarId='jmogielnicki@pinterest.com', timeMin=now, maxResults=10, singleEvents=True,
-    #     orderBy='startTime').execute()
-    # return eventsResult
+    service = get_calendar_service()
+    start_string = start.isoformat() + 'Z' # 'Z' indicates UTC time
+    end_string = end.isoformat() + 'Z'
+
+    print('Getting events for {0}'.format(ldap))
+    eventsResult = service.events().list(
+        calendarId='{0}@pinterest.com'.format(ldap),
+        timeMin=start_string,
+        timeMax=end_string,
+        timeZone=consts.TIMEZONE,
+        maxResults=2000,
+        singleEvents=True,
+        orderBy='startTime').execute()
+    return eventsResult
 
 def create_calendar_event():
     service = get_calendar_service()
@@ -180,35 +189,38 @@ def write_groups_to_sheets(groups, spreadsheet_id, range):
     response = request.execute()
     pprint(response)
 
+# def pivot_list_of_dicts_to_nested_dict(list_of_dicts, key_1, key_2=None):
+#     # key_1 = week_id
+#     # key_2 = match_id
+#     new_dict = {}
+#     for item in list_of_dicts:
+#         first_key = item.get(key_1):
+#         if new_dict.get(first_key
 
-def dictify_match_data(data):
-    headers = data[:1][0]
-    people = data[1:]
+def pivot_list_of_dicts_to_nested_dict(list_of_dicts, key_1):
     matches = {}
-    for person in people:
-        person_as_dict = dict(zip(headers, person))
-        match_id = person_as_dict.get('match_id')
-        if not matches.get(match_id):
-            matches[match_id] = [person_as_dict]
+    for item in list_of_dicts:
+        value_to_pivot_on = item.get(key_1)
+        if not matches.get(value_to_pivot_on):
+            matches[value_to_pivot_on] = [item]
         else:
-            matches[match_id].append(person_as_dict)
+            matches[value_to_pivot_on].append(item)
     return matches
 
 def convert_sheets_data_to_list_of_dicts(data):
     # takes google sheets data (list of lists with header row as first item in list) and transforms into dictionary
     headers = data[:1][0]
-    people = data[1:]
-    return [dict(zip(headers, person)) for person in people]
+    rowData = data[1:]
+    return [dict(zip(headers, row)) for row in rowData]
 
-def convert_list_of_dicts_to_sheets_format(data):
-    # takes dictionary data and transforms it into list of lists that google sheets expects
+def convert_list_of_dicts_to_sheets_format(data, fields_to_output):
+    # takes dictionary data and transforms it into the list of lists that google sheets expects
     rows = []
-    fields_to_output = ['name', 'ldap', 'team', 'blacklist', 'match_id']
     rows.append(fields_to_output)
     row = []
-    for person in data:
+    for item in data:
         for header_name in fields_to_output:
-            cell_value = person.get(header_name)
+            cell_value = item.get(header_name)
             if isinstance(cell_value, list):
                 cell_value = [str(value) for value in cell_value]
                 cell_value = ', '.join(cell_value)
