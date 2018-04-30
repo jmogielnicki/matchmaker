@@ -149,6 +149,7 @@ def main():
     http = credentials.authorize(httplib2.Http())
     service = discovery.build('gmail', 'v1', http=http)
     match_list = utils.get_data_from_google_sheets(SPREADSHEET_ID, OUTPUT_RANGE_NAME)
+    match_list = utils.convert_sheets_data_to_list_of_dicts(data=match_list)
     recipients = utils.pivot_list_of_dicts_to_nested_dict(match_list, 'match_id')
     print(recipients)
     # recipients = {0: [{'ldap': u'jschlegel', 'match_id': 0, 'name': u'Jason Schlegal', 'team': u''}, {'ldap': u'jmogielnicki', 'match_id': 0, 'name': u'John Mogielnicki', 'team': u'CPX'}]}
