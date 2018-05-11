@@ -37,51 +37,84 @@ def append_blacklist(people, historical_matches):
         person['blacklist'] = blacklist
     return people
 
-def has_bad_match(people):
-    grouped_matches = group_matches(people)
-    for match_id, group in grouped_matches.iteritems():
-        # print('___ match ' + str(match_id))
-        total_blacklist = [blacklisted_person for person in group for blacklisted_person in person.get('blacklist')]
-        # print('blacklist: ' + str(total_blacklist))
-        for person in group:
-            # print(person)
-            if person.get('ldap') in total_blacklist:
-                print('* found a bad match....starting over')
-                return True
-    return False
+# def has_bad_match(people):
+#     grouped_matches = group_matches(people)
+#     for match_id, group in grouped_matches.iteritems():
+#         # print('___ match ' + str(match_id))
+#         total_blacklist = [blacklisted_person for person in group for blacklisted_person in person.get('blacklist')]
+#         # print('blacklist: ' + str(total_blacklist))
+#         for person in group:
+#             # print(person)
+#             if person.get('ldap') in total_blacklist:
+#                 print('* found a bad match....starting over')
+#                 return True
+#     return False
 
+def get_match_for_person(person, people_dict):
+    all_people = people_dict.keys()
+    # print("%s" % person)
+    filtered_people =  list(set(all_people)-set(people_dict.get(person).get('blacklist')))
+    if filtered_people:
+        return [person, filtered_people[random.randint(0,len(filtered_people)-1)]]
+    else:
+        return None
+
+def add_last_person(person, people):
+    filtered_people = people[:]
+    filtered_people.remove(person)
+    match_id_dict = dict([(x.get('match_id'), [x]) for x in filtered_people])
+    for p in filtered_people:
+        if p not in match_id_dict.get(p.get('match_id')):
+            match_id_dict[p.get('match_id')].append(p)
+    # import pdb; pdb.set_trace();
+    blacklist = person.get('blacklist')
+    for matchid, people in match_id_dict.iteritems():
+        if people[0].get('ldap') not in blacklist and people[1].get('ldap') not in blacklist:
+            return matchid
+    return None
 
 def make_matches(people, opt_outs):
+    print("make matches called!")
     group_size = 2
     opt_outs_ldaps = [row[2] for row in opt_outs]
-    people = [person for person in people if person.get('ldap') not in opt_outs_ldaps and person.get('out_of_office') != 'y']
-    random.shuffle(people)
+    filtered_people = [person for person in people if person.get('ldap') not in opt_outs_ldaps and person.get('out_of_office') != 'y']
+    # (to test for odd number) filtered_people = filtered_people[1:]
+    people_dict = dict([(x.get('ldap'), x) for x in filtered_people])
+    random.shuffle(filtered_people)
+    remaining_people = [x.get('ldap') for x in filtered_people]
+    match_idx = 0
+    for person in filtered_people:
+        if person.get('ldap') not in remaining_people:
+            continue
+        remaining_people.remove(person.get('ldap'))
+        options = list(set(remaining_people) - set(person.get('blacklist')))
+        if not options and not remaining_people:
+            result = add_last_person(person, filtered_people)
+            if result:
+                person['match_id'] = result
+            else:
+                make_matches(people, opt_outs)
+        elif not options:
+            make_matches(people, opt_outs)
+        else:
+            match = people_dict.get(random.choice(options))
+            person['match_id'] = match_idx
+            match['match_id'] = match_idx
+            remaining_people.remove(match.get('ldap'))
+            match_idx += 1
+    return filtered_people
 
-    match_id = 0
-    for idx, person in enumerate(people):
-        person['match_id'] = match_id
-        # increment group number, unless we only have 1 person left in the list in which case include them in last group
-        if idx % group_size == 1 and len(people) - idx > 2:
-            match_id += 1
 
-    # For now, we just look to see if anyone got matched with someone in their blacklist and if so we run the whole
-    # thing again.  This is wildly inefficient and won't scale, so we need to figure out a better way
-    if has_bad_match(people):
-        make_matches(people, opt_outs)
-
-    return people
 
 
 def main(args):
     office_list = utils.get_data_from_google_sheets(consts.SPREADSHEET_ID, consts.OFFICE_LIST_RANGE_NAME)
     people = utils.convert_sheets_data_to_list_of_dicts(data=office_list)
-    # import pdb; pdb.set_trace()
     opt_out_list = utils.get_data_from_google_sheets(consts.SPREADSHEET_ID, consts.OPT_OUT_RANGE_NAME)
     historical_matches = utils.get_data_from_google_sheets(consts.SPREADSHEET_ID, consts.HISTORICAL_MATCHES_RANGE_NAME)
     historical_matches = utils.convert_sheets_data_to_list_of_dicts(historical_matches)
 
-    people = append_blacklist(people, historical_matches)
-
+    people = append_blacklist(people, historical_matches) 
     matches = make_matches(people, opt_out_list)
     matches = sorted(matches, key=lambda match: int(match.get('match_id')))
     fields_to_output = ['name', 'ldap', 'team', 'blacklist', 'match_id']
