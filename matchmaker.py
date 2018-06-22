@@ -35,6 +35,13 @@ def append_blacklist(people, historical_matches):
             # print(people_dict.get(manager_ldap))
             people_dict.get(manager_ldap).get('blacklist').append(person.get('ldap'))
         match_keys = []
+        team = person['team']
+        if team != 'Other':
+            for office_mate in people_dict.keys():
+                if person['ldap'] == office_mate:
+                    continue
+                if people_dict.get(office_mate)['team'] == team and office_mate not in blacklist:
+                    blacklist.append(office_mate)
         # Loop through once to get match keys we need to identify historical matches
         for historical_person in historical_matches:
             if historical_person.get('ldap') == person.get('ldap'):
@@ -45,19 +52,6 @@ def append_blacklist(people, historical_matches):
                 blacklist.append(historical_person.get('ldap'))
         person['blacklist'] = blacklist
     return people
-
-# def has_bad_match(people):
-#     grouped_matches = group_matches(people)
-#     for match_id, group in grouped_matches.iteritems():
-#         # print('___ match ' + str(match_id))
-#         total_blacklist = [blacklisted_person for person in group for blacklisted_person in person.get('blacklist')]
-#         # print('blacklist: ' + str(total_blacklist))
-#         for person in group:
-#             # print(person)
-#             if person.get('ldap') in total_blacklist:
-#                 print('* found a bad match....starting over')
-#                 return True
-#     return False
 
 def get_match_for_person(person, people_dict):
     all_people = people_dict.keys()
