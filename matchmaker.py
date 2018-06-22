@@ -87,6 +87,7 @@ def make_matches(people, opt_outs):
     group_size = 2
     opt_outs_ldaps = [row[2] for row in opt_outs]
     filtered_people = [person for person in people if person.get('ldap') not in opt_outs_ldaps and person.get('out_of_office') != 'y']
+    filtered_people = sorted(filtered_people, key=lambda person: len(person['blacklist']), reverse=True)
     # (to test for odd number) filtered_people = filtered_people[1:]
     people_dict = dict([(x.get('ldap'), x) for x in filtered_people])
     random.shuffle(filtered_people)
