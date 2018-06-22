@@ -8,7 +8,6 @@ def print_slackified_matches(data):
     matches = utils.convert_sheets_data_to_list_of_dicts(data=data)
     sorted_matches = sorted(matches, key=itemgetter('match_id'))
     for match_id, match in itertools.groupby(sorted_matches, key=itemgetter('match_id')):
-        match_string += 'match {}: '.format(match_id)
         for person in match:
             match_string += '@'
             match_string += person.get('ldap')
