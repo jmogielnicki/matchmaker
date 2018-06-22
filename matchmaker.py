@@ -21,10 +21,19 @@ def get_match_key(person):
     return person.get('week_of')+'_'+person.get('match_id')
 
 def append_blacklist(people, historical_matches):
+    people_dict = dict([(x.get('ldap'), x) for x in people])
     for person in people:
-        blacklist = []
+        person['blacklist'] = []
+    for person in people:
+        blacklist = person.get('blacklist')
         # add the person's manager to their blacklist
-        blacklist.append(person.get('manager_ldap'))
+        manager_ldap = person.get('manager_ldap')
+        blacklist.append(manager_ldap)
+        if manager_ldap != 'none': 
+            # print( person)
+            # print(manager_ldap)
+            # print(people_dict.get(manager_ldap))
+            people_dict.get(manager_ldap).get('blacklist').append(person.get('ldap'))
         match_keys = []
         # Loop through once to get match keys we need to identify historical matches
         for historical_person in historical_matches:
@@ -88,6 +97,7 @@ def make_matches(people, opt_outs):
             continue
         remaining_people.remove(person.get('ldap'))
         options = list(set(remaining_people) - set(person.get('blacklist')))
+        # print(person.get('ldap') + ': ' + str(options)) 
         if not options and not remaining_people:
             result = add_last_person(person, filtered_people)
             if result:
@@ -115,6 +125,7 @@ def main(args):
     historical_matches = utils.convert_sheets_data_to_list_of_dicts(historical_matches)
 
     people = append_blacklist(people, historical_matches) 
+    # print(people)
     matches = make_matches(people, opt_out_list)
     matches = sorted(matches, key=lambda match: int(match.get('match_id')))
     fields_to_output = ['name', 'ldap', 'team', 'blacklist', 'match_id']
@@ -125,7 +136,6 @@ def main(args):
     else:
         for match in matches:
             print(match)
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
