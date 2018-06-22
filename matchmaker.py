@@ -30,9 +30,6 @@ def append_blacklist(people, historical_matches):
         manager_ldap = person.get('manager_ldap')
         blacklist.append(manager_ldap)
         if manager_ldap != 'none': 
-            # print( person)
-            # print(manager_ldap)
-            # print(people_dict.get(manager_ldap))
             people_dict.get(manager_ldap).get('blacklist').append(person.get('ldap'))
         match_keys = []
         team = person['team']
@@ -55,7 +52,6 @@ def append_blacklist(people, historical_matches):
 
 def get_match_for_person(person, people_dict):
     all_people = people_dict.keys()
-    # print("%s" % person)
     filtered_people =  list(set(all_people)-set(people_dict.get(person).get('blacklist')))
     if filtered_people:
         return [person, filtered_people[random.randint(0,len(filtered_people)-1)]]
@@ -69,7 +65,6 @@ def add_last_person(person, people):
     for p in filtered_people:
         if p not in match_id_dict.get(p.get('match_id')):
             match_id_dict[p.get('match_id')].append(p)
-    # import pdb; pdb.set_trace();
     blacklist = person.get('blacklist')
     for matchid, people in match_id_dict.iteritems():
         if people[0].get('ldap') not in blacklist and people[1].get('ldap') not in blacklist:
@@ -92,7 +87,6 @@ def make_matches(people, opt_outs):
             continue
         remaining_people.remove(person.get('ldap'))
         options = list(set(remaining_people) - set(person.get('blacklist')))
-        # print(person.get('ldap') + ': ' + str(options)) 
         if not options and not remaining_people:
             result = add_last_person(person, filtered_people)
             if result:
@@ -120,7 +114,6 @@ def main(args):
     historical_matches = utils.convert_sheets_data_to_list_of_dicts(historical_matches)
 
     people = append_blacklist(people, historical_matches) 
-    # print(people)
     matches = make_matches(people, opt_out_list)
     matches = sorted(matches, key=lambda match: int(match.get('match_id')))
     fields_to_output = ['name', 'ldap', 'team', 'blacklist', 'match_id']
