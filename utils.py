@@ -103,7 +103,7 @@ def get_calendar_events(ldap, start, end):
     start_string = start.isoformat() + 'Z' # 'Z' indicates UTC time
     end_string = end.isoformat() + 'Z'
 
-    print('Getting events for {0}'.format(ldap))
+    # print('Getting events for {0}'.format(ldap))
     eventsResult = service.events().list(
         calendarId='{0}@pinterest.com'.format(ldap),
         timeMin=start_string,

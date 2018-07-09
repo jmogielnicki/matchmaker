@@ -3,6 +3,7 @@ import utils
 import itertools
 from operator import itemgetter
 from datetime import datetime, timedelta
+from googleapiclient.errors import HttpError
 
 def convert_data(data):
     historical_match_list = utils.convert_sheets_data_to_list_of_dicts(data=data)
@@ -12,19 +13,27 @@ def convert_data(data):
     return pivoted_matches
 
 def get_match_rate(data):
-    count = 0
-    end_time = datetime.utcnow()
-    start_time = end_time - timedelta(days=16)
+    # count = 0
+    # end_time = datetime.utcnow()
+    # start_time = end_time - timedelta(days=16)
+    stats = []
     for week_id, week_data in data.iteritems():
+        num_groups = len(week_data)
+        count = 0
+        # import pdb;pdb.set_trace()
+        end_time = datetime.strptime(str(week_id), '%m/%d/%Y')
+        start_time = end_time - timedelta(days=18)
         print week_id
-        if week_id == '4/2/2018':
-            for match_id, match_data in week_data.iteritems():
-                print '_____________________'
-                print match_data
-                group_did_meet = False
-                source = match_data[0]
-                source_ldap = source.get('ldap')
-                target = match_data[1]
+        # print week_id
+        # if week_id == '4/2/2018':
+        for match_id, match_data in week_data.iteritems():
+            # print '_____________________'
+            # print match_data
+            group_did_meet = False
+            source = match_data[0]
+            source_ldap = source.get('ldap')
+            target = match_data[1]
+            try:
                 source_calendar_data = utils.get_calendar_events(source_ldap, start_time, end_time)
                 source_events = source_calendar_data.get('items')
                 for event in source_events:
@@ -32,15 +41,23 @@ def get_match_rate(data):
                     if attendees and len(attendees) == 2:
                         target_email = '{0}@pinterest.com'.format(target.get('ldap'))
                         if target_email in [attendee.get('email') for attendee in attendees]:
-                            print '__ group met!'
-                            print attendees
+                            # print '__ group met!'
+                            # print attendees
                             group_did_meet = True
                         # for attendee in attendees:
                         #     if attendee.get('email') == '{0}@pinterest.com'.format(target.get('ldap')):
                 if group_did_meet:
                     count += 1
                 else:
-                    print '__ group did not meet'
+                    pass
+                    # print '__ group did not meet'
+            except HttpError:
+                # print 'Error: skipping'
+                pass
+        print 'week of ' + week_id
+        print 'groups that met: ' + str(count)
+        print 'total groups: ' + str(int(num_groups))
+
     return count
                 # print match_id
                 # for index, person in match_data.iteritems():
