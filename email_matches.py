@@ -112,7 +112,7 @@ def get_recipient_names(data):
 
 def email_pairs(service, recipients_dict):
     for recipients_list in recipients_dict.values():
-        subject = 'Seattle Knitting Match for Week of 4/2'
+        subject = 'Seattle Knitting Match for Week of 9/4'
         sender = 'Seattle Knitting <knit-seattle@pinterest.com>'
         # message_text = 'Hi all,\n\nCongratulations! Here is your Seattle Knitting match for this week: '
         # message_text += get_recipient_names(recipients_list)
@@ -135,8 +135,8 @@ def email_pairs(service, recipients_dict):
         """
         recipients = get_recipients_str(recipients_list)
         msg = create_message(sender, recipients, subject, html)
+        print("Sending to " + recipients)
         send_message(service=service, user_id='me', message=msg)
-        print("Sent.")
 
 
 def main():
